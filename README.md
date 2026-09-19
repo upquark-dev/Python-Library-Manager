@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-2.5-blue.svg)
+![Version](https://img.shields.io/badge/version-2.6-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)
@@ -98,12 +98,12 @@ Discover what's installed:
 - Show package details
 - Package count summary
 
-#### 10. **🎨 Theme Toggle**
+#### 10. **⚙️ Settings (Theme & Language)**
 Customize your experience:
 - Light/Dark theme switch
+- Multi-language UI (English / 中文), applied instantly
+- Preferences persist across restarts
 - Consistent blue color scheme
-- Professional design
-- Eye-friendly colors
 
 ---
 
@@ -149,7 +149,7 @@ Customize your experience:
 ### Main Interface
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│ [Packages] [Scan] [Virtual Envs] [Python Version] [Bulk Update] [...] │
+│ [Packages] [Scan] [Virtual Envs] [Python] [Bulk Update] [...] [Settings] │
 ├─────────────┬──────────────────────────────────────────────────────────┤
 │ Categories  │  GUI Development                                         │
 │ ─────────── │  ──────────────────────────────────────────────────────  │
@@ -298,10 +298,11 @@ Python-Library-Manager/
 ├── requirements.txt                 # Python dependencies
 ├── LICENSE                          # MIT License
 ├── README.md                        # This file
-├── FINAL_FEATURES_CHECKLIST.md     # Complete features list
+├── AGENTS.md                        # AI-agent guidance for this repo
+├── PythonLibraryManager.spec        # PyInstaller build spec
 ├── .gitignore                       # Git ignore rules
 │
-├── core/                            # Core functionality (8 modules)
+├── core/                            # Core functionality (9 modules)
 │   ├── __init__.py
 │   ├── installer.py                # Package installation engine
 │   ├── library_data.py             # 220+ packages database (27 categories)
@@ -310,18 +311,29 @@ Python-Library-Manager/
 │   ├── package_version_manager.py  # Version management
 │   ├── python_detector.py          # Python installation detection
 │   ├── update_manager.py           # Bulk update functionality
-│   └── requirements_manager.py     # Requirements.txt handling
+│   ├── requirements_manager.py     # Requirements.txt handling
+│   └── runtime.py                  # Frozen-exe aware interpreter resolution
 │
-└── ui/                              # User interface (8 modules)
-    ├── __init__.py
-    ├── main_window.py              # Main application window (tabbed interface)
-    ├── theme_manager.py            # Theme switching
-    ├── package_details_dialog.py   # Package information dialog
-    ├── version_selector_dialog.py  # Version selector
-    ├── dependency_viewer_dialog.py # Dependency tree viewer
-    ├── venv_manager_dialog.py      # Virtual env manager (legacy)
-    ├── python_selector_dialog.py   # Python selector (legacy)
-    └── system_tray.py              # System tray integration
+├── ui/                              # User interface (9 modules)
+│   ├── __init__.py
+│   ├── main_window.py              # Main application window (tabbed interface)
+│   ├── theme_manager.py            # Theme switching
+│   ├── i18n.py                     # en/zh translations (tr() helper)
+│   ├── package_details_dialog.py   # Package information dialog
+│   ├── version_selector_dialog.py  # Version selector
+│   ├── dependency_viewer_dialog.py # Dependency tree viewer
+│   ├── venv_manager_dialog.py      # Virtual env manager (legacy)
+│   ├── python_selector_dialog.py   # Python selector (legacy)
+│   └── system_tray.py              # System tray integration
+│
+└── tests/                           # Test suite (53 cases, core-only, Qt-free)
+    ├── conftest.py                  # sys.path bootstrap
+    ├── test_installer.py
+    ├── test_dependency_manager.py
+    ├── test_library_data.py
+    ├── test_package_version_manager.py
+    ├── test_requirements_manager.py
+    └── test_venv_manager.py
 ```
 
 ---
@@ -441,7 +453,15 @@ python main.py
 
 ## 📝 Version History
 
-### **Version 2.5** (Current) - 2024
+### **Version 2.6** (Current) - 2026
+- ✅ New Settings view: theme + language (English / 中文) with live switching
+- ✅ Full UI internationalization framework (`ui/i18n.py`)
+- ✅ China mirror sources localized in both languages
+- ✅ Fixed critical bug: packaged exe spawned itself infinitely
+- ✅ Added automated test suite (53 cases covering `core/`)
+- ✅ Repository cleanup + `.gitignore`
+
+### **Version 2.5** - 2024
 - ✅ Added Bulk Update Manager
 - ✅ Added Requirements.txt Manager
 - ✅ All features embedded (no popups)
@@ -490,9 +510,10 @@ in the Software without restriction...
 
 ---
 
-## 👨‍💻 Author
+## 👨‍💻 Authors
 
-**DevTools Team**
+- **Original author:** DevTools Team (Umair Wali)
+- **Maintainer:** upquark
 
 ---
 
@@ -507,12 +528,14 @@ in the Software without restriction...
 
 ## 📊 Statistics
 
-- **Total Files:** 21 Python files
-- **Lines of Code:** 4,000+
+- **Total Files:** 26 Python files
+- **Lines of Code:** 4,500+
 - **Categories:** 27
 - **Packages:** 220+
 - **Features:** 10 major features
-- **Tabs:** 7 navigation tabs
+- **Tabs:** 7 navigation tabs (incl. Settings)
+- **Languages:** English / 中文
+- **Tests:** 53 automated cases
 - **Performance:** 16x faster with caching
 
 ---
@@ -522,7 +545,7 @@ in the Software without restriction...
 ### Planned Features
 - [ ] Package search functionality
 - [ ] Export/import configurations
-- [ ] Multi-language support (Urdu, Hindi, etc.)
+- [ ] More UI languages (community contributions welcome)
 - [ ] Package comparison tool
 - [ ] Installation history
 - [ ] Scheduled updates
@@ -536,6 +559,7 @@ in the Software without restriction...
 - [x] Multi-Python support ✅
 - [x] Bulk update manager ✅
 - [x] Requirements.txt manager ✅
+- [x] Multi-language UI (English / 中文) ✅
 
 ---
 
@@ -561,7 +585,7 @@ If you find this project useful, please consider giving it a star! ⭐
 
 <div align="center">
 
-**Umair Wali**
+**Umair Wali** · Maintained by **upquark**
 
 [⬆ Back to Top](#-python-library-manager)
 
