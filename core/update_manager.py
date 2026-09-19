@@ -1,15 +1,18 @@
 """Bulk Update Manager - Check and update packages"""
 
+import json
+import re
 import subprocess
-import sys
 from typing import List, Dict, Tuple
+
+from core.runtime import default_python_executable
 
 
 class UpdateManager:
     """Manages package updates"""
 
     def __init__(self, python_executable=None):
-        self.python_executable = python_executable or sys.executable
+        self.python_executable = python_executable or default_python_executable()
 
     def check_outdated_packages(self) -> Tuple[bool, List[Dict]]:
         """
@@ -27,28 +30,32 @@ class UpdateManager:
             )
 
             if result.returncode == 0:
-                import json
                 packages = json.loads(result.stdout)
                 return True, packages
             else:
                 return False, []
 
-        except Exception as e:
+        except Exception:
             return False, []
 
-    def update_package(self, package_name: str) -> Tuple[bool, str]:
+    def update_package(self, package_name: str, mirror_url: str = None) -> Tuple[bool, str]:
         """
         Update a single package
 
         Args:
             package_name: Name of the package to update
+            mirror_url: Optional mirror URL for faster downloads in China
 
         Returns:
             tuple: (success: bool, message: str)
         """
         try:
+            cmd = [self.python_executable, '-m', 'pip', 'install', '--upgrade', package_name]
+            if mirror_url:
+                cmd.extend(['-i', mirror_url])
+
             result = subprocess.run(
-                [self.python_executable, '-m', 'pip', 'install', '--upgrade', package_name],
+                cmd,
                 capture_output=True,
                 text=True,
                 timeout=300
@@ -64,12 +71,13 @@ class UpdateManager:
         except Exception as e:
             return False, str(e)
 
-    def update_multiple_packages(self, package_names: List[str]) -> List[Dict]:
+    def update_multiple_packages(self, package_names: List[str], mirror_url: str = None) -> List[Dict]:
         """
         Update multiple packages
 
         Args:
             package_names: List of package names to update
+            mirror_url: Optional mirror URL for faster downloads in China
 
         Returns:
             list: Results for each package
@@ -77,7 +85,7 @@ class UpdateManager:
         results = []
 
         for package_name in package_names:
-            success, message = self.update_package(package_name)
+            success, message = self.update_package(package_name, mirror_url)
             results.append({
                 'package': package_name,
                 'success': success,
@@ -86,9 +94,12 @@ class UpdateManager:
 
         return results
 
-    def update_all_outdated(self) -> Tuple[bool, str]:
+    def update_all_outdated(self, mirror_url: str = None) -> Tuple[bool, str]:
         """
         Update all outdated packages at once
+
+        Args:
+            mirror_url: Optional mirror URL for faster downloads in China
 
         Returns:
             tuple: (success: bool, message: str)
@@ -103,8 +114,12 @@ class UpdateManager:
             package_names = [pkg['name'] for pkg in outdated]
 
             # Update all at once
+            cmd = [self.python_executable, '-m', 'pip', 'install', '--upgrade'] + package_names
+            if mirror_url:
+                cmd.extend(['-i', mirror_url])
+
             result = subprocess.run(
-                [self.python_executable, '-m', 'pip', 'install', '--upgrade'] + package_names,
+                cmd,
                 capture_output=True,
                 text=True,
                 timeout=600
@@ -140,11 +155,8 @@ class UpdateManager:
 
             if result.returncode == 0:
                 # Parse output to get latest version
-                lines = result.stdout.split('\n')
-                for line in lines:
+                for line in result.stdout.split('\n'):
                     if 'Available versions:' in line or 'LATEST:' in line:
-                        # Extract first version
-                        import re
                         versions = re.findall(r'\d+\.\d+\.\d+', line)
                         if versions:
                             return versions[0]

@@ -4,13 +4,14 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QListWidget, QTextEdit, QSplitter,
     QLabel, QCheckBox, QScrollArea, QFrame, QMessageBox,
-    QStackedWidget, QListWidgetItem
+    QStackedWidget, QListWidgetItem, QComboBox
 )
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QIcon
+from PyQt6.QtCore import Qt, QSettings
+from PyQt6.QtGui import QFont
 from core.library_data import LIBRARY_CATEGORIES
 from core.installer import PackageInstaller
 from ui.theme_manager import ThemeManager
+from ui.i18n import tr, set_language, get_language
 from ui.package_details_dialog import PackageDetailsDialog
 from ui.venv_manager_dialog import VenvManagerDialog
 from ui.version_selector_dialog import VersionSelectorDialog
@@ -171,6 +172,11 @@ class MainWindow(QMainWindow):
         self.selected_python_version = None  # Selected Python version string
         self.current_view = "packages"  # Track current view: packages, scan, venv, python
 
+        # Load persisted settings (theme + language) before building the UI
+        self.settings = QSettings("DevTools", "Library Manager")
+        set_language(self.settings.value("language", "en"))
+        self.theme_manager.is_dark = self.settings.value("theme", "light") == "dark"
+
         self.init_ui()
         self.apply_theme()
 
@@ -233,14 +239,17 @@ class MainWindow(QMainWindow):
         self.requirements_view = self.create_requirements_view()
         self.stacked_widget.addWidget(self.requirements_view)
 
+        # View 7: Settings view
+        self.settings_view = self.create_settings_view()
+        self.stacked_widget.addWidget(self.settings_view)
+
         main_vertical_layout.addWidget(self.stacked_widget)
 
         central_widget.setLayout(main_vertical_layout)
 
         # Add status bar
         self.status_bar = self.statusBar()
-        python_info = self.installer.get_python_info()
-        self.status_bar.showMessage(f"Python: {python_info['version']} | Path: {python_info['path']}")
+        self.update_status_bar()
 
     def create_packages_view(self):
         """Create the main packages view with sidebar and content"""
@@ -268,14 +277,14 @@ class MainWindow(QMainWindow):
         layout.setSpacing(15)
 
         # Header
-        header = QLabel("🔍 Scan Installed Packages")
+        header = self.scan_header = QLabel(tr('scan_title'))
         header.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         header.setStyleSheet("color: #16a085; padding: 10px;")
         layout.addWidget(header)
 
         # Description
-        desc = QLabel("Scan your system for installed Python packages and see which ones are in our database.")
+        desc = self.scan_desc = QLabel(tr('scan_desc'))
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
         desc.setStyleSheet("color: #7f8c8d; font-size: 13px; padding: 5px;")
         desc.setWordWrap(True)
@@ -337,7 +346,7 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(20, 20, 20, 20)
 
         # Header
-        header = QLabel("🔧 Virtual Environment Manager")
+        header = self.venv_header = QLabel(tr('venv_title'))
         header.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         header.setStyleSheet("color: #9b59b6; padding: 10px;")
         layout.addWidget(header)
@@ -464,13 +473,13 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(20, 20, 20, 20)
 
         # Header
-        header = QLabel("🐍 Select Python Version")
+        header = self.python_header = QLabel(tr('python_title'))
         header.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         header.setStyleSheet("color: #3498db; padding: 10px;")
         layout.addWidget(header)
 
         # Description
-        desc = QLabel("Select which Python installation to use for package management.")
+        desc = self.python_desc = QLabel(tr('python_desc'))
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
         desc.setStyleSheet("color: #7f8c8d; font-size: 13px; padding: 5px;")
         desc.setWordWrap(True)
@@ -574,13 +583,13 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(20, 20, 20, 20)
 
         # Header
-        header = QLabel("Bulk Update Manager")
+        header = self.update_header = QLabel(tr('update_title'))
         header.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         header.setStyleSheet("color: #27ae60; padding: 10px;")
         layout.addWidget(header)
 
         # Description
-        desc = QLabel("Check for outdated packages and update them with one click.")
+        desc = self.update_desc = QLabel(tr('update_desc'))
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
         desc.setStyleSheet("color: #7f8c8d; font-size: 13px; padding: 5px;")
         layout.addWidget(desc)
@@ -625,6 +634,46 @@ class MainWindow(QMainWindow):
         toolbar.addWidget(update_all_btn)
 
         toolbar.addStretch()
+
+        # China mirror source checkbox and dropdown
+        self.mirror_checkbox = QCheckBox(tr('mirror_checkbox'))
+        self.mirror_checkbox.setStyleSheet("""
+            QCheckBox {
+                font-size: 13px;
+                font-weight: bold;
+                color: #2c3e50;
+                spacing: 8px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+            }
+        """)
+        self.mirror_checkbox.stateChanged.connect(self.toggle_mirror_dropdown)
+        toolbar.addWidget(self.mirror_checkbox)
+
+        self.mirror_dropdown = QComboBox()
+        self._populate_mirror_dropdown()
+        self.mirror_dropdown.setEnabled(False)
+        self.mirror_dropdown.setStyleSheet("""
+            QComboBox {
+                padding: 8px 15px;
+                border: 2px solid #bdc3c7;
+                border-radius: 5px;
+                font-size: 12px;
+                min-width: 350px;
+                background-color: white;
+            }
+            QComboBox:hover {
+                border: 2px solid #3498db;
+            }
+            QComboBox:disabled {
+                background-color: #ecf0f1;
+                color: #95a5a6;
+            }
+        """)
+        toolbar.addWidget(self.mirror_dropdown)
+
         layout.addLayout(toolbar)
 
         # Outdated packages list
@@ -682,13 +731,13 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(20, 20, 20, 20)
 
         # Header
-        header = QLabel("Requirements.txt Manager")
+        header = self.req_header = QLabel(tr('req_title'))
         header.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         header.setStyleSheet("color: #e67e22; padding: 10px;")
         layout.addWidget(header)
 
         # Description
-        desc = QLabel("Import from or export to requirements.txt files.")
+        desc = self.req_desc = QLabel(tr('req_desc'))
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
         desc.setStyleSheet("color: #7f8c8d; font-size: 13px; padding: 5px;")
         layout.addWidget(desc)
@@ -774,8 +823,8 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
 
         # Home/Packages tab
-        home_btn = QPushButton("Packages")
-        home_btn.setStyleSheet("""
+        self.nav_packages_btn = QPushButton(tr('nav_packages'))
+        self.nav_packages_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3498db;
                 color: white;
@@ -789,12 +838,12 @@ class MainWindow(QMainWindow):
                 background-color: #2980b9;
             }
         """)
-        home_btn.clicked.connect(lambda: self.switch_view(0))  # Index 0 for packages view
-        layout.addWidget(home_btn)
+        self.nav_packages_btn.clicked.connect(lambda: self.switch_view(0))  # Index 0 for packages view
+        layout.addWidget(self.nav_packages_btn)
 
         # Scan System tab
-        scan_btn = QPushButton("Scan Installed Packages")
-        scan_btn.setStyleSheet("""
+        self.nav_scan_btn = QPushButton(tr('nav_scan'))
+        self.nav_scan_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3498db;
                 color: white;
@@ -808,12 +857,12 @@ class MainWindow(QMainWindow):
                 background-color: #2980b9;
             }
         """)
-        scan_btn.clicked.connect(lambda: self.switch_view(1))  # Index 1 for scan view
-        layout.addWidget(scan_btn)
+        self.nav_scan_btn.clicked.connect(lambda: self.switch_view(1))  # Index 1 for scan view
+        layout.addWidget(self.nav_scan_btn)
 
         # Virtual Environment Manager tab
-        venv_btn = QPushButton("Manage Virtual Envs")
-        venv_btn.setStyleSheet("""
+        self.nav_venv_btn = QPushButton(tr('nav_venv'))
+        self.nav_venv_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3498db;
                 color: white;
@@ -827,12 +876,12 @@ class MainWindow(QMainWindow):
                 background-color: #2980b9;
             }
         """)
-        venv_btn.clicked.connect(lambda: self.switch_view(2))  # Index 2 for venv view
-        layout.addWidget(venv_btn)
+        self.nav_venv_btn.clicked.connect(lambda: self.switch_view(2))  # Index 2 for venv view
+        layout.addWidget(self.nav_venv_btn)
 
         # Python Version Selector tab
-        python_btn = QPushButton("Select Python Version")
-        python_btn.setStyleSheet("""
+        self.nav_python_btn = QPushButton(tr('nav_python'))
+        self.nav_python_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3498db;
                 color: white;
@@ -846,12 +895,12 @@ class MainWindow(QMainWindow):
                 background-color: #2980b9;
             }
         """)
-        python_btn.clicked.connect(lambda: self.switch_view(3))  # Index 3 for python view
-        layout.addWidget(python_btn)
+        self.nav_python_btn.clicked.connect(lambda: self.switch_view(3))  # Index 3 for python view
+        layout.addWidget(self.nav_python_btn)
 
         # Bulk Update Manager tab
-        update_btn = QPushButton("Bulk Update")
-        update_btn.setStyleSheet("""
+        self.nav_update_btn = QPushButton(tr('nav_update'))
+        self.nav_update_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3498db;
                 color: white;
@@ -865,12 +914,12 @@ class MainWindow(QMainWindow):
                 background-color: #2980b9;
             }
         """)
-        update_btn.clicked.connect(lambda: self.switch_view(4))  # Index 4 for update view
-        layout.addWidget(update_btn)
+        self.nav_update_btn.clicked.connect(lambda: self.switch_view(4))  # Index 4 for update view
+        layout.addWidget(self.nav_update_btn)
 
         # Requirements Manager tab
-        req_btn = QPushButton("Requirements.txt")
-        req_btn.setStyleSheet("""
+        self.nav_requirements_btn = QPushButton(tr('nav_requirements'))
+        self.nav_requirements_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3498db;
                 color: white;
@@ -884,15 +933,15 @@ class MainWindow(QMainWindow):
                 background-color: #2980b9;
             }
         """)
-        req_btn.clicked.connect(lambda: self.switch_view(5))  # Index 5 for requirements view
-        layout.addWidget(req_btn)
+        self.nav_requirements_btn.clicked.connect(lambda: self.switch_view(5))  # Index 5 for requirements view
+        layout.addWidget(self.nav_requirements_btn)
 
         # Add stretch to push buttons to left
         layout.addStretch()
 
-        # Theme toggle button on right
-        theme_btn = QPushButton("Toggle Theme")
-        theme_btn.setStyleSheet("""
+        # Settings button on right (replaces the old "Toggle Theme" button)
+        self.nav_settings_btn = QPushButton(tr('nav_settings'))
+        self.nav_settings_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3498db;
                 color: white;
@@ -905,8 +954,8 @@ class MainWindow(QMainWindow):
                 background-color: #2980b9;
             }
         """)
-        theme_btn.clicked.connect(self.toggle_theme)
-        layout.addWidget(theme_btn)
+        self.nav_settings_btn.clicked.connect(lambda: self.switch_view(6))
+        layout.addWidget(self.nav_settings_btn)
 
         toolbar.setLayout(layout)
         return toolbar
@@ -928,9 +977,9 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
 
         # Header
-        header = QLabel("Categories")
-        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header.setStyleSheet("""
+        self.sidebar_header = QLabel(tr('sidebar_categories'))
+        self.sidebar_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.sidebar_header.setStyleSheet("""
             QLabel {
                 background-color: #34495e;
                 color: white;
@@ -940,7 +989,7 @@ class MainWindow(QMainWindow):
                 border-bottom: 2px solid #3498db;
             }
         """)
-        layout.addWidget(header)
+        layout.addWidget(self.sidebar_header)
 
         # Scrollable area for category buttons
         scroll = QScrollArea()
@@ -979,7 +1028,7 @@ class MainWindow(QMainWindow):
         # Category buttons
         self.category_buttons = {}
         for category in LIBRARY_CATEGORIES.keys():
-            btn = QPushButton(category)
+            btn = QPushButton(tr('cat.' + category))
             btn.setCheckable(True)
             btn.setStyleSheet("""
                 QPushButton {
@@ -1029,14 +1078,14 @@ class MainWindow(QMainWindow):
         top_layout = QHBoxLayout()
         top_layout.setContentsMargins(20, 10, 20, 10)
 
-        self.category_label = QLabel("Select a category")
+        self.category_label = QLabel(tr('content_select_category'))
         self.category_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #2c3e50;")
         top_layout.addWidget(self.category_label)
 
         top_layout.addStretch()
 
         # Select All / Deselect All buttons
-        self.select_all_btn = QPushButton("Select All")
+        self.select_all_btn = QPushButton(tr('btn_select_all'))
         self.select_all_btn.clicked.connect(self.select_all)
         self.select_all_btn.setStyleSheet("""
             QPushButton {
@@ -1053,7 +1102,7 @@ class MainWindow(QMainWindow):
         """)
         top_layout.addWidget(self.select_all_btn)
 
-        self.deselect_all_btn = QPushButton("Deselect All")
+        self.deselect_all_btn = QPushButton(tr('btn_deselect_all'))
         self.deselect_all_btn.clicked.connect(self.deselect_all)
         self.deselect_all_btn.setStyleSheet("""
             QPushButton {
@@ -1208,7 +1257,7 @@ class MainWindow(QMainWindow):
     def load_category(self, category, check_installed=True):
         """Load libraries for selected category"""
         self.current_category = category
-        self.category_label.setText(category)
+        self.category_label.setText(tr('cat.' + category))
 
         # Update button states
         for cat, btn in self.category_buttons.items():
@@ -1539,7 +1588,7 @@ class MainWindow(QMainWindow):
     def switch_view(self, index):
         """Switch between different views"""
         self.stacked_widget.setCurrentIndex(index)
-        self.current_view = ["packages", "scan", "venv", "python", "update", "requirements"][index]
+        self.current_view = ["packages", "scan", "venv", "python", "update", "requirements", "settings"][index]
 
         # Load data when switching to certain views
         if index == 2:  # Venv view
@@ -1713,11 +1762,39 @@ Current: {'Yes' if python.is_current else 'No'}
             item.setData(Qt.ItemDataRole.UserRole, pkg)
             self.update_list_widget.addItem(item)
 
+    def toggle_mirror_dropdown(self, state):
+        """Toggle mirror dropdown based on checkbox state"""
+        self.mirror_dropdown.setEnabled(state == Qt.CheckState.Checked.value)
+
+    def _populate_mirror_dropdown(self):
+        """(Re)fill the mirror dropdown in the current language.
+
+        Item format stays "<name> - <url>" so update_all_packages can keep
+        extracting the URL by splitting on ' - '.
+        """
+        mirrors = [
+            ('mirror_tsinghua', 'https://pypi.tuna.tsinghua.edu.cn/simple/'),
+            ('mirror_douban', 'https://pypi.douban.com/simple/'),
+            ('mirror_aliyun', 'https://mirrors.aliyun.com/pypi/simple/'),
+            ('mirror_ustc', 'https://pypi.mirrors.ustc.edu.cn/simple/'),
+        ]
+        self.mirror_dropdown.clear()
+        for name_key, url in mirrors:
+            self.mirror_dropdown.addItem(f"{tr(name_key)} - {url}")
+
     def update_all_packages(self):
         """Update all outdated packages"""
-        self.update_results_text.setPlainText("Updating all outdated packages...\n")
+        # Get mirror URL if checkbox is checked
+        mirror_url = None
+        if self.mirror_checkbox.isChecked():
+            mirror_text = self.mirror_dropdown.currentText()
+            # Extract URL from text like "清华大学 - https://..."
+            mirror_url = mirror_text.split(' - ')[-1] if ' - ' in mirror_text else mirror_text
 
-        success, message = self.update_manager.update_all_outdated()
+        source_info = f" using mirror: {mirror_url}" if mirror_url else " using default PyPI"
+        self.update_results_text.setPlainText(f"Updating all outdated packages{source_info}...\n")
+
+        success, message = self.update_manager.update_all_outdated(mirror_url)
 
         if success:
             self.update_results_text.append(f"\n✓ {message}")
@@ -1800,9 +1877,154 @@ Current: {'Yes' if python.is_current else 'No'}
                 f"Now using Python {python_version}"
             )
 
+    def create_settings_view(self):
+        """Create Settings view - theme and language options"""
+        view = QWidget()
+        layout = QVBoxLayout()
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        # Header
+        self.settings_header = QLabel(tr('settings_title'))
+        self.settings_header.setFont(QFont("Arial", 18, QFont.Weight.Bold))
+        self.settings_header.setStyleSheet("color: #3498db; padding: 10px;")
+        layout.addWidget(self.settings_header)
+
+        # Theme selector
+        self.settings_theme_label = QLabel(tr('settings_theme'))
+        self.settings_theme_label.setFont(QFont("Arial", 13, QFont.Weight.Bold))
+        layout.addWidget(self.settings_theme_label)
+
+        self.theme_combo = QComboBox()
+        self.theme_combo.addItems([tr('theme_light'), tr('theme_dark')])
+        self.theme_combo.setCurrentIndex(1 if self.theme_manager.is_dark else 0)
+        self.theme_combo.setStyleSheet("""
+            QComboBox {
+                padding: 8px;
+                font-size: 13px;
+                border: 2px solid #bdc3c7;
+                border-radius: 5px;
+                background-color: white;
+                color: #2c3e50;
+            }
+        """)
+        self.theme_combo.currentIndexChanged.connect(self.set_theme)
+        layout.addWidget(self.theme_combo)
+
+        # Language selector
+        self.settings_language_label = QLabel(tr('settings_language'))
+        self.settings_language_label.setFont(QFont("Arial", 13, QFont.Weight.Bold))
+        layout.addWidget(self.settings_language_label)
+
+        self.language_combo = QComboBox()
+        self.language_combo.addItems(["English", "中文"])
+        self.language_combo.setCurrentIndex(1 if get_language() == 'zh' else 0)
+        self.language_combo.setStyleSheet("""
+            QComboBox {
+                padding: 8px;
+                font-size: 13px;
+                border: 2px solid #bdc3c7;
+                border-radius: 5px;
+                background-color: white;
+                color: #2c3e50;
+            }
+        """)
+        self.language_combo.currentIndexChanged.connect(self.change_language)
+        layout.addWidget(self.language_combo)
+
+        # Hint
+        self.settings_hint_label = QLabel(tr('settings_hint'))
+        self.settings_hint_label.setStyleSheet("color: #7f8c8d; font-size: 12px; padding: 5px;")
+        layout.addWidget(self.settings_hint_label)
+
+        layout.addStretch()
+        view.setLayout(layout)
+        return view
+
+    def set_theme(self, index):
+        """Apply theme selected in Settings (0=light, 1=dark) and persist it"""
+        self.theme_manager.is_dark = (index == 1)
+        self.settings.setValue("theme", "dark" if self.theme_manager.is_dark else "light")
+        self.apply_theme()
+        # Reload current category to refresh colors
+        if self.current_category:
+            self.load_category(self.current_category, check_installed=True)
+
+    def change_language(self, index):
+        """Switch UI language (0=English, 1=中文) and persist it"""
+        language = 'zh' if index == 1 else 'en'
+        set_language(language)
+        self.settings.setValue("language", language)
+        self.retranslate_ui()
+
+    def update_status_bar(self):
+        """Refresh the status bar Python info in the current language"""
+        python_info = self.installer.get_python_info()
+        self.status_bar.showMessage(
+            tr('status_python').format(
+                version=python_info['version'], path=python_info['path']
+            )
+        )
+
+    def retranslate_ui(self):
+        """Re-apply all translatable strings after a language change"""
+        # Header navigation
+        self.nav_packages_btn.setText(tr('nav_packages'))
+        self.nav_scan_btn.setText(tr('nav_scan'))
+        self.nav_venv_btn.setText(tr('nav_venv'))
+        self.nav_python_btn.setText(tr('nav_python'))
+        self.nav_update_btn.setText(tr('nav_update'))
+        self.nav_requirements_btn.setText(tr('nav_requirements'))
+        self.nav_settings_btn.setText(tr('nav_settings'))
+
+        # Sidebar
+        self.sidebar_header.setText(tr('sidebar_categories'))
+        for category, btn in self.category_buttons.items():
+            btn.setText(tr('cat.' + category))
+
+        # Packages view
+        if self.current_category:
+            self.category_label.setText(tr('cat.' + self.current_category))
+        else:
+            self.category_label.setText(tr('content_select_category'))
+        self.select_all_btn.setText(tr('btn_select_all'))
+        self.deselect_all_btn.setText(tr('btn_deselect_all'))
+
+        # View headers / descriptions
+        self.scan_header.setText(tr('scan_title'))
+        self.scan_desc.setText(tr('scan_desc'))
+        self.venv_header.setText(tr('venv_title'))
+        self.python_header.setText(tr('python_title'))
+        self.python_desc.setText(tr('python_desc'))
+        self.update_header.setText(tr('update_title'))
+        self.update_desc.setText(tr('update_desc'))
+        self.mirror_checkbox.setText(tr('mirror_checkbox'))
+        mirror_index = self.mirror_dropdown.currentIndex()
+        self._populate_mirror_dropdown()
+        self.mirror_dropdown.setCurrentIndex(max(mirror_index, 0))
+        self.req_header.setText(tr('req_title'))
+        self.req_desc.setText(tr('req_desc'))
+
+        # Settings view itself (block signals to avoid re-entry)
+        self.settings_header.setText(tr('settings_title'))
+        self.settings_theme_label.setText(tr('settings_theme'))
+        self.settings_language_label.setText(tr('settings_language'))
+        self.settings_hint_label.setText(tr('settings_hint'))
+        self.theme_combo.blockSignals(True)
+        self.theme_combo.setItemText(0, tr('theme_light'))
+        self.theme_combo.setItemText(1, tr('theme_dark'))
+        self.theme_combo.blockSignals(False)
+
+        # Status bar
+        self.update_status_bar()
+
     def toggle_theme(self):
         """Toggle between light and dark theme"""
         self.theme_manager.toggle_theme()
+        self.settings.setValue("theme", "dark" if self.theme_manager.is_dark else "light")
+        self.theme_combo.blockSignals(True)
+        self.theme_combo.setCurrentIndex(1 if self.theme_manager.is_dark else 0)
+        self.theme_combo.blockSignals(False)
         self.apply_theme()
         # Reload current category to refresh colors
         if self.current_category:

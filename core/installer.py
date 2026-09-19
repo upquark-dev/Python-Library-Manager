@@ -2,8 +2,10 @@
 
 import subprocess
 import platform
-import sys
+import shlex
 import re
+
+from core.runtime import default_python_executable, is_frozen
 
 
 class PackageInstaller:
@@ -11,7 +13,7 @@ class PackageInstaller:
 
     def __init__(self):
         self.os_type = platform.system()
-        self.python_executable = sys.executable
+        self.python_executable = default_python_executable()
 
     def set_python_executable(self, python_path):
         """Set custom Python executable to use for package operations"""
@@ -19,6 +21,13 @@ class PackageInstaller:
 
     def get_python_info(self):
         """Get current Python executable and version"""
+        if not self.python_executable:
+            # Frozen build with no interpreter on PATH: report the embedded
+            # runtime without spawning anything.
+            return {
+                'path': '(embedded)' if is_frozen() else '',
+                'version': platform.python_version()
+            }
         try:
             result = subprocess.run(
                 [self.python_executable, '--version'],
@@ -45,12 +54,12 @@ class PackageInstaller:
             return f"Windows {os_release} ({os_version})"
         elif os_name == "Linux":
             try:
-                with open("/etc/os-release", "r") as f:
+                with open("/etc/os-release") as f:
                     os_info = f.read()
                     name_match = re.search(r'PRETTY_NAME="([^"]+)"', os_info)
                     if name_match:
                         return name_match.group(1)
-            except:
+            except Exception:
                 pass
             return f"Linux {os_release}"
         elif os_name == "Darwin":
@@ -69,14 +78,15 @@ class PackageInstaller:
             tuple: (success: bool, output: str)
         """
         try:
-            # Replace 'pip' with the full path to current Python's pip
+            # Build argument list instead of shell string to avoid injection
             if install_cmd.startswith("pip "):
-                install_cmd = install_cmd.replace("pip ", f'"{self.python_executable}" -m pip ', 1)
+                args = [self.python_executable, '-m', 'pip'] + shlex.split(install_cmd[4:])
+            else:
+                args = shlex.split(install_cmd)
 
             # Run the installation command
             result = subprocess.run(
-                install_cmd,
-                shell=True,
+                args,
                 capture_output=True,
                 text=True,
                 timeout=300  # 5 minute timeout
@@ -112,11 +122,10 @@ class PackageInstaller:
             base_package = package_name.split()[0].lower()
 
             # Use pip uninstall
-            cmd = f'"{self.python_executable}" -m pip uninstall -y {base_package}'
+            cmd = [self.python_executable, '-m', 'pip', 'uninstall', '-y', base_package]
 
             result = subprocess.run(
                 cmd,
-                shell=True,
                 capture_output=True,
                 text=True,
                 timeout=60
@@ -146,28 +155,26 @@ class PackageInstaller:
         """
         try:
             base_package = package_name.split()[0].lower()
-            cmd = f'"{self.python_executable}" -m pip show {base_package}'
+            cmd = [self.python_executable, '-m', 'pip', 'show', base_package]
 
             result = subprocess.run(
                 cmd,
-                shell=True,
                 capture_output=True,
                 text=True,
                 timeout=30
             )
 
             return result.returncode == 0
-        except:
+        except Exception:
             return False
 
     def upgrade_pip(self):
         """Upgrade pip to the latest version"""
         try:
-            cmd = f'"{self.python_executable}" -m pip install --upgrade pip'
+            cmd = [self.python_executable, '-m', 'pip', 'install', '--upgrade', 'pip']
 
             result = subprocess.run(
                 cmd,
-                shell=True,
                 capture_output=True,
                 text=True,
                 timeout=120
@@ -181,11 +188,10 @@ class PackageInstaller:
     def list_installed(self):
         """List all installed packages"""
         try:
-            cmd = f'"{self.python_executable}" -m pip list'
+            cmd = [self.python_executable, '-m', 'pip', 'list']
 
             result = subprocess.run(
                 cmd,
-                shell=True,
                 capture_output=True,
                 text=True,
                 timeout=30

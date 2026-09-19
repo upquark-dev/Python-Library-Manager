@@ -56,6 +56,9 @@ class PythonDetector:
 
     def _add_current_python(self):
         """Add the current Python interpreter"""
+        if getattr(sys, 'frozen', False):
+            # Frozen exe: sys.executable is the app itself, not a Python.
+            return
         try:
             version = self._get_python_version(sys.executable)
             if version:

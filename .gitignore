@@ -1,0 +1,17 @@
+# Bytecode / test caches
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# PyInstaller
+build/
+dist/
+.build-libs/
+
+# Virtual environments
+.venv/
+venv/
+.build-venv/
+
+# WorkBuddy workspace data
+.workbuddy/

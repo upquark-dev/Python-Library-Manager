@@ -1,14 +1,12 @@
 """Package details dialog window"""
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QTextEdit, QFrame, QScrollArea,
+    QApplication, QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+    QPushButton, QFrame, QScrollArea,
     QWidget, QProgressBar
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QFont
 import subprocess
-import json
 
 
 class PackageInfoWorker(QThread):
@@ -49,7 +47,7 @@ class PackageInfoWorker(QThread):
                 )
                 if pypi_result.returncode == 0:
                     info['available_versions'] = pypi_result.stdout
-            except:
+            except Exception:
                 pass
 
             self.finished.emit(info)
@@ -261,7 +259,6 @@ class PackageDetailsDialog(QDialog):
 
     def copy_install_command(self):
         """Copy install command to clipboard"""
-        from PyQt6.QtWidgets import QApplication
         clipboard = QApplication.clipboard()
         clipboard.setText(self.install_cmd)
 

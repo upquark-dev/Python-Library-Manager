@@ -3,7 +3,6 @@
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu
 from PyQt6.QtGui import QIcon, QAction
 from PyQt6.QtCore import QObject, pyqtSignal
-import sys
 import os
 
 

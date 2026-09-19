@@ -1,16 +1,17 @@
 """Requirements.txt Manager - Import/Export requirements"""
 
 import subprocess
-import sys
 import os
 from typing import List, Tuple, Dict
+
+from core.runtime import default_python_executable
 
 
 class RequirementsManager:
     """Manages requirements.txt import/export"""
 
     def __init__(self, python_executable=None):
-        self.python_executable = python_executable or sys.executable
+        self.python_executable = python_executable or default_python_executable()
 
     def export_requirements(self, file_path: str, include_versions: bool = True) -> Tuple[bool, str]:
         """
@@ -182,7 +183,7 @@ class RequirementsManager:
 
             return True, packages
 
-        except Exception as e:
+        except Exception:
             return False, []
 
     def validate_requirements(self, file_path: str) -> Tuple[bool, str, List[str]]:
@@ -260,5 +261,5 @@ class RequirementsManager:
 
             return True, diff
 
-        except Exception as e:
+        except Exception:
             return False, {}

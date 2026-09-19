@@ -1,15 +1,11 @@
 """Package Version Manager"""
 
 import subprocess
-import re
 from packaging import version
 
 
 class PackageVersionManager:
     """Manages package versions"""
-
-    def __init__(self):
-        pass
 
     def get_available_versions(self, package_name):
         """Get all available versions of a package from PyPI"""
@@ -91,8 +87,8 @@ class PackageVersionManager:
         if error or not versions:
             return None
 
-        # Return first version (usually latest)
-        return versions[0] if versions else None
+        # First entry reported by pip is the latest version
+        return versions[0]
 
     def compare_versions(self, ver1, ver2):
         """Compare two version strings"""
@@ -106,7 +102,7 @@ class PackageVersionManager:
                 return -1
             else:
                 return 0
-        except:
+        except Exception:
             return 0
 
     def sort_versions(self, versions_list):
@@ -118,5 +114,5 @@ class PackageVersionManager:
                 reverse=True
             )
             return sorted_versions
-        except:
+        except Exception:
             return versions_list

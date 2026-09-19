@@ -3,10 +3,9 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
     QListWidget, QListWidgetItem, QLabel, QMessageBox,
-    QInputDialog, QTextEdit, QFrame, QWidget
+    QInputDialog, QTextEdit
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QFont
 from core.venv_manager import VirtualEnvManager
 
 

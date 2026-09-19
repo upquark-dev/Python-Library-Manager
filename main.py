@@ -10,7 +10,23 @@ from PyQt6.QtCore import Qt
 from ui.main_window import MainWindow
 
 
+def _bail_if_spawned_as_interpreter():
+    """Exit immediately when the frozen exe is re-launched as a "python".
+
+    In frozen builds sys.executable is this exe; any code that runs
+    ``[sys.executable, '--version'/'-m'/'-c', ...]`` would otherwise start a
+    full new GUI instance, which spawns again -> infinite process loop.
+    The app has no CLI, so any dash-prefixed argument means we were invoked
+    as an interpreter substitute and must exit quietly.
+    """
+    if getattr(sys, 'frozen', False) and any(
+        arg.startswith('-') for arg in sys.argv[1:]
+    ):
+        sys.exit(0)
+
+
 def main():
+    _bail_if_spawned_as_interpreter()
     """Initialize and run the application"""
     # Enable high DPI scaling
     QApplication.setHighDpiScaleFactorRoundingPolicy(

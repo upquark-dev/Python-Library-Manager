@@ -1,10 +1,11 @@
 """Virtual Environment Manager"""
 
 import os
-import sys
-import subprocess
 import platform
-from pathlib import Path
+import shutil
+import subprocess
+
+from core.runtime import default_python_executable
 
 
 class VirtualEnvManager:
@@ -12,7 +13,7 @@ class VirtualEnvManager:
 
     def __init__(self):
         self.system = platform.system()
-        self.python_executable = sys.executable
+        self.python_executable = default_python_executable()
 
     def get_default_venv_path(self):
         """Get default path for virtual environments"""
@@ -46,11 +47,10 @@ class VirtualEnvManager:
 
     def _is_valid_venv(self, venv_path):
         """Check if directory is a valid virtual environment"""
+        python_path = self.get_venv_python(venv_path)
         if self.system == "Windows":
-            python_path = os.path.join(venv_path, "Scripts", "python.exe")
             activate_path = os.path.join(venv_path, "Scripts", "activate.bat")
         else:
-            python_path = os.path.join(venv_path, "bin", "python")
             activate_path = os.path.join(venv_path, "bin", "activate")
 
         return os.path.exists(python_path) and os.path.exists(activate_path)
@@ -66,11 +66,7 @@ class VirtualEnvManager:
         }
 
         try:
-            # Get Python version
-            if self.system == "Windows":
-                python_exe = os.path.join(venv_path, "Scripts", "python.exe")
-            else:
-                python_exe = os.path.join(venv_path, "bin", "python")
+            python_exe = self.get_venv_python(venv_path)
 
             result = subprocess.run(
                 [python_exe, "--version"],
@@ -100,7 +96,7 @@ class VirtualEnvManager:
                     filepath = os.path.join(dirpath, filename)
                     try:
                         total_size += os.path.getsize(filepath)
-                    except:
+                    except OSError:
                         pass
 
             # Convert to MB
@@ -148,7 +144,6 @@ class VirtualEnvManager:
             if not os.path.exists(venv_path):
                 return False, "Virtual environment does not exist"
 
-            import shutil
             shutil.rmtree(venv_path)
             return True, "Virtual environment deleted successfully"
 

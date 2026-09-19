@@ -4,21 +4,27 @@ import subprocess
 import re
 
 
+def _clean_dep_name(dep):
+    """Strip version specifiers from a dependency string, e.g. 'click>=8.0' -> 'click'"""
+    return re.split(r'[<>=!]', dep)[0].strip()
+
+
 class DependencyManager:
     """Manages package dependencies"""
 
-    def __init__(self):
-        pass
+    def _pip_show(self, package_name):
+        """Run `pip show` for a package and return the CompletedProcess result"""
+        return subprocess.run(
+            ["pip", "show", package_name],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
 
     def get_package_dependencies(self, package_name):
         """Get dependencies of a package"""
         try:
-            result = subprocess.run(
-                ["pip", "show", package_name],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+            result = self._pip_show(package_name)
 
             if result.returncode != 0:
                 return None, "Package not installed"
@@ -27,7 +33,7 @@ class DependencyManager:
             for line in result.stdout.split('\n'):
                 if line.startswith("Requires:"):
                     deps_str = line.split(":", 1)[1].strip()
-                    if deps_str and deps_str != "":
+                    if deps_str:
                         # Split by comma and clean up
                         dependencies = [d.strip() for d in deps_str.split(',')]
                     break
@@ -40,12 +46,7 @@ class DependencyManager:
     def get_reverse_dependencies(self, package_name):
         """Get packages that depend on this package"""
         try:
-            result = subprocess.run(
-                ["pip", "show", package_name],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+            result = self._pip_show(package_name)
 
             if result.returncode != 0:
                 return None, "Package not installed"
@@ -54,7 +55,7 @@ class DependencyManager:
             for line in result.stdout.split('\n'):
                 if line.startswith("Required-by:"):
                     deps_str = line.split(":", 1)[1].strip()
-                    if deps_str and deps_str != "":
+                    if deps_str:
                         reverse_deps = [d.strip() for d in deps_str.split(',')]
                     break
 
@@ -85,8 +86,7 @@ class DependencyManager:
             return tree
 
         for dep in deps:
-            # Clean dependency name (remove version specifiers)
-            dep_clean = re.split(r'[<>=!]', dep)[0].strip()
+            dep_clean = _clean_dep_name(dep)
 
             if dep_clean and dep_clean not in _visited:
                 subtree = self.build_dependency_tree(
@@ -147,7 +147,7 @@ class DependencyManager:
             deps, _ = self.get_package_dependencies(pkg)
             if deps:
                 for dep in deps:
-                    dep_clean = re.split(r'[<>=!]', dep)[0].strip()
+                    dep_clean = _clean_dep_name(dep)
                     if dep_clean:
                         dfs(dep_clean)
 
@@ -159,12 +159,7 @@ class DependencyManager:
     def get_package_info_summary(self, package_name):
         """Get summary information about a package"""
         try:
-            result = subprocess.run(
-                ["pip", "show", package_name],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+            result = self._pip_show(package_name)
 
             if result.returncode != 0:
                 return None
