@@ -6,7 +6,7 @@ Python Library Manager — a PyQt6 desktop GUI for bulk-installing Python packag
 
 ## Commands
 - Run: `python main.py`
-- Deps: `pip install -r requirements.txt` — note: this file is a full `pip freeze` (90+ pinned packages, some future-dated), not minimal. Actual runtime deps are `PyQt6`, `requests`, and `pywin32` (Windows only).
+- Deps: `pip install -r requirements.txt` — minimal: `PyQt6` + `packaging` only (verified against actual imports; `requests`/`pywin32` are NOT used anywhere in the code despite older docs claiming so).
 - Package (exe): single PyInstaller spec — `PythonLibraryManager.spec` (windowed, `console=False`). PyInstaller is NOT installed in the system Python; it lives in the repo-local `.build-libs/` (used via PYTHONPATH): `PYTHONPATH=.build-libs python -m PyInstaller --clean --noconfirm PythonLibraryManager.spec` — build with a Python that has PyQt6 installed. (There used to be a `PLM_debug.spec` console variant; it was removed — recreate with `--console` if ever needed.)
 - Lint (CI, Python 3.10): only `flake8 . --select=E9,F63,F7,F82` fails the build (syntax errors / undefined names). Everything else is advisory (`--exit-zero`, max-line-length 127). Match this gate if you extend linting.
 - Test: CI runs `pytest` — there IS a real suite: `tests/` has 6 modules (~500 lines, 53 cases) covering `core/` only, all Qt-free. Tests mock `subprocess.run`; `test_installer.py` locks in the no-`shell=True` security contract — run it before touching `core/installer.py`.
