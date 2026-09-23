@@ -5,6 +5,8 @@ from PyQt6.QtGui import QIcon, QAction
 from PyQt6.QtCore import QObject, pyqtSignal
 import os
 
+from ui.i18n import tr
+
 
 class SystemTrayManager(QObject):
     """Manages system tray icon and notifications"""
@@ -43,28 +45,28 @@ class SystemTrayManager(QObject):
         menu = QMenu()
 
         # Show/Hide action
-        show_action = QAction("Show Window", self.main_window)
-        show_action.triggered.connect(self.show_main_window)
-        menu.addAction(show_action)
+        self.show_action = QAction(tr('tray_show_window'), self.main_window)
+        self.show_action.triggered.connect(self.show_main_window)
+        menu.addAction(self.show_action)
 
         menu.addSeparator()
 
         # Scan action
-        scan_action = QAction("🔍 Scan Installed Packages", self.main_window)
-        scan_action.triggered.connect(self._scan_packages)
-        menu.addAction(scan_action)
+        self.scan_action = QAction(tr('tray_scan'), self.main_window)
+        self.scan_action.triggered.connect(self._scan_packages)
+        menu.addAction(self.scan_action)
 
         # Virtual Environment Manager action
-        venv_action = QAction("🔧 Virtual Environments", self.main_window)
-        venv_action.triggered.connect(self._open_venv_manager)
-        menu.addAction(venv_action)
+        self.venv_action = QAction(tr('tray_venv'), self.main_window)
+        self.venv_action.triggered.connect(self._open_venv_manager)
+        menu.addAction(self.venv_action)
 
         menu.addSeparator()
 
         # Quit action
-        quit_action = QAction("Quit", self.main_window)
-        quit_action.triggered.connect(self.quit_application)
-        menu.addAction(quit_action)
+        self.quit_action = QAction(tr('tray_quit'), self.main_window)
+        self.quit_action.triggered.connect(self.quit_application)
+        menu.addAction(self.quit_action)
 
         self.tray_icon.setContextMenu(menu)
 
@@ -94,6 +96,15 @@ class SystemTrayManager(QObject):
         """Handle tray icon activation"""
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
             self.show_main_window()
+
+    def retranslate(self):
+        """Refresh tray menu texts in the current language"""
+        if not self.tray_icon:
+            return
+        self.show_action.setText(tr('tray_show_window'))
+        self.scan_action.setText(tr('tray_scan'))
+        self.venv_action.setText(tr('tray_venv'))
+        self.quit_action.setText(tr('tray_quit'))
 
     def show_main_window(self):
         """Show and raise main window"""

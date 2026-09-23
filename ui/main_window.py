@@ -2047,6 +2047,10 @@ Current: {'Yes' if python.is_current else 'No'}
         self.close_behavior_combo.setItemText(1, tr('close_exit'))
         self.close_behavior_combo.blockSignals(False)
 
+        # System tray menu
+        if self.system_tray:
+            self.system_tray.retranslate()
+
         # Status bar
         self.update_status_bar()
 

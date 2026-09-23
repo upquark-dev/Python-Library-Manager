@@ -56,6 +56,10 @@ _EN = {
     'close_to_tray': 'Minimize to system tray',
     'close_exit': 'Exit application',
     'tray_minimized_msg': 'Application minimized to system tray. Double-click the tray icon to restore.',
+    'tray_show_window': 'Show Window',
+    'tray_scan': 'Scan Installed Packages',
+    'tray_venv': 'Virtual Environments',
+    'tray_quit': 'Quit',
     # Category names (keys are 'cat.' + LIBRARY_CATEGORIES key)
     'cat.GUI Development': 'GUI Development',
     'cat.WhatsApp API': 'WhatsApp API',
@@ -131,6 +135,10 @@ _ZH = {
     'close_to_tray': '最小化到系统托盘',
     'close_exit': '退出程序',
     'tray_minimized_msg': '程序已最小化到系统托盘，双击托盘图标可恢复。',
+    'tray_show_window': '显示窗口',
+    'tray_scan': '扫描已安装的包',
+    'tray_venv': '虚拟环境',
+    'tray_quit': '退出',
     # Category names
     'cat.GUI Development': 'GUI 开发',
     'cat.WhatsApp API': 'WhatsApp API',
