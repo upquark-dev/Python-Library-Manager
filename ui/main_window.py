@@ -1,7 +1,7 @@
 """Main application window"""
 
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QListWidget, QTextEdit, QSplitter,
     QLabel, QCheckBox, QScrollArea, QFrame, QMessageBox,
     QStackedWidget, QListWidgetItem, QComboBox
@@ -2078,5 +2078,9 @@ Current: {'Yes' if python.is_current else 'No'}
                 tr('tray_minimized_msg')
             )
         else:
-            # Exit normally
+            # Exit normally. main.py sets quitOnLastWindowClosed(False) for
+            # tray mode, so accepting the close is NOT enough — quit explicitly.
+            if self.system_tray and self.system_tray.tray_icon:
+                self.system_tray.tray_icon.hide()
             event.accept()
+            QApplication.instance().quit()
