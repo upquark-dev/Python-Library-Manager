@@ -52,6 +52,10 @@ _EN = {
     'theme_dark': 'Dark',
     'settings_language': 'Language / 语言',
     'settings_hint': 'Changes take effect immediately and are saved automatically.',
+    'settings_close_behavior': 'On Close',
+    'close_to_tray': 'Minimize to system tray',
+    'close_exit': 'Exit application',
+    'tray_minimized_msg': 'Application minimized to system tray. Double-click the tray icon to restore.',
     # Category names (keys are 'cat.' + LIBRARY_CATEGORIES key)
     'cat.GUI Development': 'GUI Development',
     'cat.WhatsApp API': 'WhatsApp API',
@@ -123,6 +127,10 @@ _ZH = {
     'theme_dark': '深色',
     'settings_language': '语言 / Language',
     'settings_hint': '更改立即生效并自动保存。',
+    'settings_close_behavior': '关闭时',
+    'close_to_tray': '最小化到系统托盘',
+    'close_exit': '退出程序',
+    'tray_minimized_msg': '程序已最小化到系统托盘，双击托盘图标可恢复。',
     # Category names
     'cat.GUI Development': 'GUI 开发',
     'cat.WhatsApp API': 'WhatsApp API',

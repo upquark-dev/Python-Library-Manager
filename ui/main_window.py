@@ -1932,6 +1932,29 @@ Current: {'Yes' if python.is_current else 'No'}
         self.language_combo.currentIndexChanged.connect(self.change_language)
         layout.addWidget(self.language_combo)
 
+        # Close behavior selector
+        self.settings_close_label = QLabel(tr('settings_close_behavior'))
+        self.settings_close_label.setFont(QFont("Arial", 13, QFont.Weight.Bold))
+        layout.addWidget(self.settings_close_label)
+
+        self.close_behavior_combo = QComboBox()
+        self.close_behavior_combo.addItems([tr('close_to_tray'), tr('close_exit')])
+        self.close_behavior_combo.setCurrentIndex(
+            0 if self.settings.value("close_behavior", "tray") == "tray" else 1
+        )
+        self.close_behavior_combo.setStyleSheet("""
+            QComboBox {
+                padding: 8px;
+                font-size: 13px;
+                border: 2px solid #bdc3c7;
+                border-radius: 5px;
+                background-color: white;
+                color: #2c3e50;
+            }
+        """)
+        self.close_behavior_combo.currentIndexChanged.connect(self.set_close_behavior)
+        layout.addWidget(self.close_behavior_combo)
+
         # Hint
         self.settings_hint_label = QLabel(tr('settings_hint'))
         self.settings_hint_label.setStyleSheet("color: #7f8c8d; font-size: 12px; padding: 5px;")
@@ -1956,6 +1979,10 @@ Current: {'Yes' if python.is_current else 'No'}
         set_language(language)
         self.settings.setValue("language", language)
         self.retranslate_ui()
+
+    def set_close_behavior(self, index):
+        """Persist close behavior (0=minimize to tray, 1=exit)"""
+        self.settings.setValue("close_behavior", "tray" if index == 0 else "exit")
 
     def update_status_bar(self):
         """Refresh the status bar Python info in the current language"""
@@ -2009,11 +2036,16 @@ Current: {'Yes' if python.is_current else 'No'}
         self.settings_header.setText(tr('settings_title'))
         self.settings_theme_label.setText(tr('settings_theme'))
         self.settings_language_label.setText(tr('settings_language'))
+        self.settings_close_label.setText(tr('settings_close_behavior'))
         self.settings_hint_label.setText(tr('settings_hint'))
         self.theme_combo.blockSignals(True)
         self.theme_combo.setItemText(0, tr('theme_light'))
         self.theme_combo.setItemText(1, tr('theme_dark'))
         self.theme_combo.blockSignals(False)
+        self.close_behavior_combo.blockSignals(True)
+        self.close_behavior_combo.setItemText(0, tr('close_to_tray'))
+        self.close_behavior_combo.setItemText(1, tr('close_exit'))
+        self.close_behavior_combo.blockSignals(False)
 
         # Status bar
         self.update_status_bar()
@@ -2035,15 +2067,16 @@ Current: {'Yes' if python.is_current else 'No'}
         self.setStyleSheet(self.theme_manager.get_stylesheet())
 
     def closeEvent(self, event):
-        """Handle window close event"""
-        if self.system_tray and self.system_tray.is_available():
+        """Handle window close event per the close_behavior setting"""
+        minimize_to_tray = self.settings.value("close_behavior", "tray") == "tray"
+        if minimize_to_tray and self.system_tray and self.system_tray.is_available():
             # Minimize to tray instead of closing
             event.ignore()
             self.hide()
             self.system_tray.show_info(
                 "Library Manager",
-                "Application minimized to system tray. Double-click the tray icon to restore."
+                tr('tray_minimized_msg')
             )
         else:
-            # No tray available, just close normally
+            # Exit normally
             event.accept()
